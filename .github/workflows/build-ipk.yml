@@ -112,15 +112,12 @@ jobs:
           PKG_TYPE: ${{ github.event.inputs.pkg_type || 'both' }}
           RELEASE_TYPE: ${{ github.event.inputs.release_type || 'snapshot' }}
         run: |
+          cd .github
           if [ "$PKG_TYPE" = "both" ] || [ "$PKG_TYPE" = "apk" ]; then
-            pushd .github
             fakeroot bash build-ipk.sh apk "$RELEASE_TYPE"
-            popd
           fi
           if [ "$PKG_TYPE" = "both" ] || [ "$PKG_TYPE" = "ipk" ]; then
-            pushd .github
             fakeroot bash build-ipk.sh ipk "$RELEASE_TYPE"
-            popd
           fi
           echo "APK_ASSET_NAME=$(ls *.apk 2>/dev/null || echo '')" >> $GITHUB_ENV
           echo "IPK_ASSET_NAME=$(ls *.ipk 2>/dev/null || echo '')" >> $GITHUB_ENV
@@ -132,6 +129,7 @@ jobs:
         with:
           name: ${{ env.APK_ASSET_NAME }}
           path: .github/${{ env.APK_ASSET_NAME }}
+          retention-days: 7
           archive: false
 
       - name: Publishing IPK files to GitHub Artifacts
@@ -140,6 +138,7 @@ jobs:
         with:
           name: ${{ env.IPK_ASSET_NAME }}
           path: .github/${{ env.IPK_ASSET_NAME }}
+          retention-days: 7
           archive: false
 
       - name: Publishing to GitHub Releases
