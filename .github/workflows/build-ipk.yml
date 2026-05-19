@@ -20,6 +20,14 @@ on:
         options:
           - 'snapshot'
           - 'release'
+      upload_release:
+        description: 'Upload to GitHub Release'
+        required: true
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
   push:
     branches:
       - 'master'
@@ -143,9 +151,9 @@ jobs:
 
       - name: Publishing to GitHub Releases
         uses: svenstaro/upload-release-action@v2
-        if: github.event_name == 'release'
+        if: (github.event_name == 'release') || (github.event_name == 'workflow_dispatch' && github.event.inputs.upload_release == 'true')
         with:
           repo_token: ${{ github.token }}
           file: .github/luci-app-homeproxy_*.*
           file_glob: true
-          tag: ${{ github.ref }}
+          tag: ${{ github.event.inputs.release_type == 'release' && github.ref_name || 'snapshot' }}
