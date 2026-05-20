@@ -49,32 +49,6 @@ EOF
 
 po2lmo "$PKG_DIR/po/zh_Hans/homeproxy.po" "$TEMP_PKG_DIR/usr/lib/lua/luci/i18n/homeproxy.zh-cn.lmo"
 
-cat > "$TEMP_DIR/preserve-config-preinst" <<-'EOF'
-#!/bin/sh
-[ "${IPKG_NO_SCRIPT}" = "1" ] && exit 0
-
-config="${IPKG_INSTROOT}/etc/config/homeproxy"
-backup="${IPKG_INSTROOT}/tmp/homeproxy.config.keep"
-
-if [ -f "$config" ]; then
-	mkdir -p "${IPKG_INSTROOT}/tmp"
-	cp -p "$config" "$backup"
-fi
-
-exit 0
-EOF
-
-cat > "$TEMP_DIR/preserve-config-postinst" <<-'EOF'
-config="${IPKG_INSTROOT}/etc/config/homeproxy"
-backup="${IPKG_INSTROOT}/tmp/homeproxy.config.keep"
-
-if [ -f "$backup" ]; then
-	mkdir -p "${IPKG_INSTROOT}/etc/config"
-	cp -p "$backup" "$config"
-	rm -f "$backup"
-fi
-EOF
-
 if [ "$PKG_MGR" == "apk" ]; then
 	find "$TEMP_PKG_DIR" -type f,l -printf '/%P\n' | sort > "$TEMP_PKG_DIR/lib/apk/packages/$PKG_NAME.list"
 	echo "/etc/config/homeproxy" >> "$TEMP_PKG_DIR/lib/apk/packages/$PKG_NAME.conffiles"
@@ -83,48 +57,35 @@ if [ "$PKG_MGR" == "apk" ]; then
 		sha256sum "$TEMP_PKG_DIR/$file" | sed "s,$TEMP_PKG_DIR/,," >> "$TEMP_PKG_DIR/lib/apk/packages/$PKG_NAME.conffiles_static"
 	done
 
-	{
-		cat <<-'EOF'
-#!/bin/sh
+	echo -e '#!/bin/sh
 [ "${IPKG_NO_SCRIPT}" = "1" ] && exit 0
-EOF
-		cat "$TEMP_DIR/preserve-config-postinst"
-		cat <<-EOF
-[ -s \${IPKG_INSTROOT}/lib/functions.sh ] || exit 0
-. \${IPKG_INSTROOT}/lib/functions.sh
-export root="\${IPKG_INSTROOT}"
-export pkgname="$PKG_NAME"
+[ -s ${IPKG_INSTROOT}/lib/functions.sh ] || exit 0
+. ${IPKG_INSTROOT}/lib/functions.sh
+export root="${IPKG_INSTROOT}"
+export pkgname="'"$PKG_NAME"'"
 add_group_and_user
 default_postinst
-[ -n "\${IPKG_INSTROOT}" ] || { rm -f /tmp/luci-indexcache.*
+[ -n "${IPKG_INSTROOT}" ] || { rm -f /tmp/luci-indexcache.*
 	rm -rf /tmp/luci-modulecache/
 	killall -HUP rpcd 2>/dev/null
 	exit 0
-}
-EOF
-	} > "$TEMP_DIR/post-install"
+}' > "$TEMP_DIR/post-install"
 
-	{
-		cat <<-'EOF'
-#!/bin/sh
+	echo -e '#!/bin/sh
 export PKG_UPGRADE=1
+#!/bin/sh
 [ "${IPKG_NO_SCRIPT}" = "1" ] && exit 0
-EOF
-		cat "$TEMP_DIR/preserve-config-postinst"
-		cat <<-EOF
-[ -s \${IPKG_INSTROOT}/lib/functions.sh ] || exit 0
-. \${IPKG_INSTROOT}/lib/functions.sh
-export root="\${IPKG_INSTROOT}"
-export pkgname="$PKG_NAME"
+[ -s ${IPKG_INSTROOT}/lib/functions.sh ] || exit 0
+. ${IPKG_INSTROOT}/lib/functions.sh
+export root="${IPKG_INSTROOT}"
+export pkgname="'"$PKG_NAME"'"
 add_group_and_user
 default_postinst
-[ -n "\${IPKG_INSTROOT}" ] || { rm -f /tmp/luci-indexcache.*
+[ -n "${IPKG_INSTROOT}" ] || { rm -f /tmp/luci-indexcache.*
 	rm -rf /tmp/luci-modulecache/
 	killall -HUP rpcd 2>/dev/null
 	exit 0
-}
-EOF
-	} > "$TEMP_DIR/post-upgrade"
+}' > "$TEMP_DIR/post-upgrade"
 
 	echo -e '#!/bin/sh
 [ -s ${IPKG_INSTROOT}/lib/functions.sh ] || exit 0
@@ -142,9 +103,7 @@ default_prerm' > "$TEMP_DIR/pre-deinstall"
 		--info "url:" \
 		--info "maintainer:Tianling Shen <cnsztl@immortalwrt.org>" \
 		--info "provides:" \
-		--script "pre-install:$TEMP_DIR/preserve-config-preinst" \
 		--script "post-install:$TEMP_DIR/post-install" \
-		--script "pre-upgrade:$TEMP_DIR/preserve-config-preinst" \
 		--script "post-upgrade:$TEMP_DIR/post-upgrade" \
 		--script "pre-deinstall:$TEMP_DIR/pre-deinstall" \
 		--info "depends:libc sing-box firewall4 kmod-nft-tproxy ucode-mod-digest" \
@@ -172,21 +131,11 @@ else
 
 	echo -e "/etc/config/homeproxy" > "$TEMP_PKG_DIR/CONTROL/conffiles"
 
-	cat "$TEMP_DIR/preserve-config-preinst" > "$TEMP_PKG_DIR/CONTROL/preinst"
-	chmod 0755 "$TEMP_PKG_DIR/CONTROL/preinst"
-
-	{
-		cat <<-'EOF'
-#!/bin/sh
+	echo -e '#!/bin/sh
 [ "${IPKG_NO_SCRIPT}" = "1" ] && exit 0
-EOF
-		cat "$TEMP_DIR/preserve-config-postinst"
-		cat <<-'EOF'
 [ -s ${IPKG_INSTROOT}/lib/functions.sh ] || exit 0
 . ${IPKG_INSTROOT}/lib/functions.sh
-default_postinst $0 $@
-EOF
-	} > "$TEMP_PKG_DIR/CONTROL/postinst"
+default_postinst $0 $@' > "$TEMP_PKG_DIR/CONTROL/postinst"
 	chmod 0755 "$TEMP_PKG_DIR/CONTROL/postinst"
 
 	echo -e "[ -n "\${IPKG_INSTROOT}" ] || {
