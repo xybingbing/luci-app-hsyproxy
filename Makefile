@@ -22,6 +22,39 @@ define Package/luci-app-homeproxy/conffiles
 /etc/homeproxy/resources/proxy_list.txt
 endef
 
+define Package/luci-app-homeproxy/preinst
+#!/bin/sh
+[ "$${IPKG_NO_SCRIPT}" = "1" ] && exit 0
+
+config="$${IPKG_INSTROOT}/etc/config/homeproxy"
+backup="$${IPKG_INSTROOT}/tmp/homeproxy.config.keep"
+
+if [ -f "$$config" ]; then
+	mkdir -p "$${IPKG_INSTROOT}/tmp"
+	cp -p "$$config" "$$backup"
+fi
+
+exit 0
+endef
+
+define Package/luci-app-homeproxy/postinst
+#!/bin/sh
+[ "$${IPKG_NO_SCRIPT}" = "1" ] && exit 0
+
+config="$${IPKG_INSTROOT}/etc/config/homeproxy"
+backup="$${IPKG_INSTROOT}/tmp/homeproxy.config.keep"
+
+if [ -f "$$backup" ]; then
+	mkdir -p "$${IPKG_INSTROOT}/etc/config"
+	cp -p "$$backup" "$$config"
+	rm -f "$$backup"
+fi
+
+[ -s "$${IPKG_INSTROOT}/lib/functions.sh" ] || exit 0
+. "$${IPKG_INSTROOT}/lib/functions.sh"
+default_postinst $$0 $$@
+endef
+
 include $(TOPDIR)/feeds/luci/luci.mk
 
 # call BuildPackage - OpenWrt buildroot signature
