@@ -79,6 +79,12 @@ if (isEmpty(uci.get(uciconfig, uciserver, 'log_level')))
 if (uci.get(uciconfig, ucimain, 'routing_port') === 'all')
 	uci.delete(uciconfig, ucimain, 'routing_port');
 
+/* This slim build only supports mainland China whitelist routing, all ports,
+ * and Redirect TCP + TProxy UDP. */
+uci.set(uciconfig, ucimain, 'routing_mode', 'bypass_mainland_china');
+uci.delete(uciconfig, ucimain, 'routing_port');
+uci.set(uciconfig, ucimain, 'proxy_mode', 'redirect_tproxy');
+
 /* experimental section was removed */
 if (uci.get(uciconfig, 'experimental'))
 	uci.delete(uciconfig, 'experimental');

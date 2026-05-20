@@ -26,19 +26,13 @@ HomeProxy is a LuCI (OpenWrt web UI) application that provides a graphical inter
 | `root/etc/homeproxy/scripts/firewall_post.ut` | nftables rule generation |
 | `htdocs/luci-static/resources/view/homeproxy/*.js` | LuCI UI views |
 
-## Routing Modes
+## Supported Routing / Proxy Mode
 
-- `bypass_mainland_china` - Default, proxy only non-China traffic
-- `proxy_mainland_china` - Inverse, proxy China traffic
-- `gfwlist` - Proxy only domains in gfw_list
-- `global` - Proxy everything
-- `custom` - User-defined sing-box config
+This slim build only supports:
 
-## Proxy Modes
-
-- `redirect_tproxy` - Transparent proxy via nftables (default)
-- `redirect_tun` - TUN device with redirect
-- `tun` - Pure TUN mode
+- Routing mode: `bypass_mainland_china` - proxy only non-China traffic
+- Routing ports: all ports
+- Proxy mode: `redirect_tproxy` - Redirect TCP + TProxy UDP
 
 ## Dependencies
 

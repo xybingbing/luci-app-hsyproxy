@@ -125,7 +125,6 @@ return view.extend({
 		for (let i in proxy_nodes)
 			o.value(i, proxy_nodes[i]);
 		o.default = 'nil';
-		o.depends({'routing_mode': 'custom', '!reverse': true});
 		o.rmempty = false;
 
 		o = s.taboption('routing', hp.CBIStaticList, 'main_urltest_nodes', _('URLTest nodes'),
@@ -154,7 +153,6 @@ return view.extend({
 		for (let i in proxy_nodes)
 			o.value(i, proxy_nodes[i]);
 		o.default = 'nil';
-		o.depends({'routing_mode': /^((?!custom).)+$/, 'proxy_mode': /^((?!redirect$).)+$/});
 		o.rmempty = false;
 
 		o = s.taboption('routing', hp.CBIStaticList, 'main_udp_urltest_nodes', _('URLTest nodes'),
@@ -188,7 +186,6 @@ return view.extend({
 		o.value('117.50.10.10', _('ThreatBook Public DNS (117.50.10.10)'));
 		o.default = '8.8.8.8';
 		o.rmempty = false;
-		o.depends({'routing_mode': 'custom', '!reverse': true});
 		o.validate = function(section_id, value) {
 			if (section_id && !['wan'].includes(value)) {
 				if (!value)
@@ -221,7 +218,6 @@ return view.extend({
 		o.value('210.2.4.8', _('CNNIC Public DNS (210.2.4.8)'));
 		o.value('119.29.29.29', _('Tencent Public DNS (119.29.29.29)'));
 		o.value('117.50.10.10', _('ThreatBook Public DNS (117.50.10.10)'));
-		o.depends('routing_mode', 'bypass_mainland_china');
 		o.default = '223.5.5.5';
 		o.rmempty = false;
 		o.validate = function(section_id, value) {
@@ -248,60 +244,14 @@ return view.extend({
 			return true;
 		}
 
-		o = s.taboption('routing', form.ListValue, 'routing_mode', _('Routing mode'));
-		o.value('gfwlist', _('GFWList'));
-		o.value('bypass_mainland_china', _('Bypass mainland China'));
-		o.value('proxy_mainland_china', _('Only proxy mainland China'));
-		o.value('custom', _('Custom routing'));
-		o.value('global', _('Global'));
-		o.default = 'bypass_mainland_china';
-		o.rmempty = false;
-		o.onchange = function(ev, section_id, value) {
-			if (section_id && value === 'custom')
-				this.map.save(null, true);
-		}
-
-		o = s.taboption('routing', form.Value, 'routing_port', _('Routing ports'),
-			_('Specify target ports to be proxied. Multiple ports must be separated by commas.'));
-		o.value('', _('All ports'));
-		o.value('common', _('Common ports only (bypass P2P traffic)'));
-		o.validate = function(section_id, value) {
-			if (section_id && value && value !== 'common') {
-
-				let ports = [];
-				for (let i of value.split(',')) {
-					if (!stubValidator.apply('port', i) && !stubValidator.apply('portrange', i))
-						return _('Expecting: %s').format(_('valid port value'));
-					if (ports.includes(i))
-						return _('Port %s alrealy exists!').format(i);
-					ports = ports.concat(i);
-				}
-			}
-
-			return true;
-		}
-
-		o = s.taboption('routing', form.ListValue, 'proxy_mode', _('Proxy mode'));
-		o.value('redirect', _('Redirect TCP'));
-		if (features.hp_has_tproxy)
-			o.value('redirect_tproxy', _('Redirect TCP + TProxy UDP'));
-		if (features.hp_has_ip_full && features.hp_has_tun) {
-			o.value('redirect_tun', _('Redirect TCP + Tun UDP'));
-			o.value('tun', _('Tun TCP/UDP'));
-		} else {
-			o.description = _('To enable Tun support, you need to install <code>ip-full</code> and <code>kmod-tun</code>');
-		}
-		o.default = 'redirect_tproxy';
-		o.rmempty = false;
-
 		o = s.taboption('routing', form.Flag, 'ipv6_support', _('IPv6 support'));
 		o.default = o.enabled;
 		o.rmempty = false;
 
+		if (false) {
 		/* Custom routing settings start */
 		/* Routing settings start */
 		o = s.taboption('routing', form.SectionValue, '_routing', form.NamedSection, 'routing', 'homeproxy');
-		o.depends('routing_mode', 'custom');
 
 		ss = o.subsection;
 		so = ss.option(form.ListValue, 'tcpip_stack', _('TCP/IP stack'),
@@ -395,7 +345,7 @@ return view.extend({
 		/* Routing nodes start */
 		s.tab('routing_node', _('Routing Nodes'));
 		o = s.taboption('routing_node', form.SectionValue, '_routing_node', form.GridSection, 'routing_node');
-		o.depends('routing_mode', 'custom');
+		o.depends('routing_mode', '__disabled__');
 
 		ss = o.subsection;
 		ss.addremove = true;
@@ -566,7 +516,7 @@ return view.extend({
 		/* Routing rules start */
 		s.tab('routing_rule', _('Routing Rules'));
 		o = s.taboption('routing_rule', form.SectionValue, '_routing_rule', form.GridSection, 'routing_rule');
-		o.depends('routing_mode', 'custom');
+		o.depends('routing_mode', '__disabled__');
 
 		ss = o.subsection;
 		ss.addremove = true;
@@ -871,7 +821,7 @@ return view.extend({
 		/* DNS settings start */
 		s.tab('dns', _('DNS Settings'));
 		o = s.taboption('dns', form.SectionValue, '_dns', form.NamedSection, 'dns', 'homeproxy');
-		o.depends('routing_mode', 'custom');
+		o.depends('routing_mode', '__disabled__');
 
 		ss = o.subsection;
 		so = ss.option(form.ListValue, 'default_strategy', _('Default DNS strategy'),
@@ -923,7 +873,7 @@ return view.extend({
 		/* DNS servers start */
 		s.tab('dns_server', _('DNS Servers'));
 		o = s.taboption('dns_server', form.SectionValue, '_dns_server', form.GridSection, 'dns_server');
-		o.depends('routing_mode', 'custom');
+		o.depends('routing_mode', '__disabled__');
 
 		ss = o.subsection;
 		ss.addremove = true;
@@ -1046,7 +996,7 @@ return view.extend({
 		/* DNS rules start */
 		s.tab('dns_rule', _('DNS Rules'));
 		o = s.taboption('dns_rule', form.SectionValue, '_dns_rule', form.GridSection, 'dns_rule');
-		o.depends('routing_mode', 'custom');
+		o.depends('routing_mode', '__disabled__');
 
 		ss = o.subsection;
 		ss.addremove = true;
@@ -1310,7 +1260,7 @@ return view.extend({
 		/* Rule set settings start */
 		s.tab('ruleset', _('Rule Set'));
 		o = s.taboption('ruleset', form.SectionValue, '_ruleset', form.GridSection, 'ruleset');
-		o.depends('routing_mode', 'custom');
+		o.depends('routing_mode', '__disabled__');
 
 		ss = o.subsection;
 		ss.addremove = true;
@@ -1394,6 +1344,7 @@ return view.extend({
 		so.placeholder = '1d';
 		so.depends('type', 'remote');
 		/* Rule set settings end */
+		}
 
 		/* ACL settings start */
 		s.tab('control', _('Access Control'));
@@ -1451,13 +1402,11 @@ return view.extend({
 		so = fwtool.addMACOption(ss, 'lan_ip_policy', 'lan_gaming_mode_mac_addrs', _('Gaming mode MAC-s'), null, hosts);
 
 		so = fwtool.addIPOption(ss, 'lan_ip_policy', 'lan_global_proxy_ipv4_ips', _('Global proxy IPv4 IP-s'), null, 'ipv4', hosts, true);
-		so.depends({'homeproxy.config.routing_mode': 'custom', '!reverse': true});
 
 		so = fwtool.addIPOption(ss, 'lan_ip_policy', 'lan_global_proxy_ipv6_ips', _('Global proxy IPv6 IP-s'), null, 'ipv6', hosts, true);
-		so.depends({'homeproxy.config.routing_mode': /^((?!custom).)+$/, 'homeproxy.config.ipv6_support': '1'});
+		so.depends('homeproxy.config.ipv6_support', '1');
 
 		so = fwtool.addMACOption(ss, 'lan_ip_policy', 'lan_global_proxy_mac_addrs', _('Global proxy MAC-s'), null, hosts);
-		so.depends({'homeproxy.config.routing_mode': 'custom', '!reverse': true});
 		/* LAN IP policy end */
 
 		/* WAN IP policy start */
@@ -1485,7 +1434,6 @@ return view.extend({
 		so.rows = 10;
 		so.monospace = true;
 		so.datatype = 'hostname';
-		so.depends({'homeproxy.config.routing_mode': 'custom', '!reverse': true});
 		so.load = function(/* ... */) {
 			return L.resolveDefault(callReadDomainList('proxy_list')).then((res) => {
 				return res.content;
@@ -1495,10 +1443,7 @@ return view.extend({
 			return callWriteDomainList('proxy_list', value);
 		}
 		so.remove = function(/* ... */) {
-			let routing_mode = this.section.formvalue('config', 'routing_mode');
-			if (routing_mode !== 'custom')
-				return callWriteDomainList('proxy_list', '');
-			return true;
+			return callWriteDomainList('proxy_list', '');
 		}
 		so.validate = function(section_id, value) {
 			if (section_id && value)
@@ -1517,7 +1462,6 @@ return view.extend({
 		so.rows = 10;
 		so.monospace = true;
 		so.datatype = 'hostname';
-		so.depends({'homeproxy.config.routing_mode': 'custom', '!reverse': true});
 		so.load = function(/* ... */) {
 			return L.resolveDefault(callReadDomainList('direct_list')).then((res) => {
 				return res.content;
@@ -1527,10 +1471,7 @@ return view.extend({
 			return callWriteDomainList('direct_list', value);
 		}
 		so.remove = function(/* ... */) {
-			let routing_mode = this.section.formvalue('config', 'routing_mode');
-			if (routing_mode !== 'custom')
-				return callWriteDomainList('direct_list', '');
-			return true;
+			return callWriteDomainList('direct_list', '');
 		}
 		so.validate = function(section_id, value) {
 			if (section_id && value)

@@ -31,8 +31,8 @@ start_service() {
 	config_load "$CONF"
 
 	local routing_mode proxy_mode
-	config_get routing_mode "config" "routing_mode" "bypass_mainland_china"
-	config_get proxy_mode "config" "proxy_mode" "redirect_tproxy"
+	routing_mode="bypass_mainland_china"
+	proxy_mode="redirect_tproxy"
 
 	local outbound_node
 	if [ "$routing_mode" != "custom" ]; then
@@ -75,25 +75,11 @@ start_service() {
 		config_get dns_port "infra" "dns_port" "5333"
 		mkdir -p "$DNSMASQ_DIR"
 		echo -e "conf-dir=$DNSMASQ_DIR" > "$DNSMASQ_DIR/../dnsmasq-homeproxy.conf"
-		case "$routing_mode" in
-		"bypass_mainland_china"|"custom"|"global")
-			cat <<-EOF >> "$DNSMASQ_DIR/redirect-dns.conf"
-				no-poll
-				no-resolv
-				server=127.0.0.1#$dns_port
-			EOF
-			;;
-		"gfwlist")
-			local gfw_nftset_v6
-			[ "$ipv6_support" -eq "0" ] || gfw_nftset_v6=",6#inet#fw4#homeproxy_gfw_list_v6"
-			sed -r -e "s/(.*)/server=\/\1\/127.0.0.1#$dns_port\nnftset=\/\1\\/4#inet#fw4#homeproxy_gfw_list_v4$gfw_nftset_v6/g" \
-				"$HP_DIR/resources/gfw_list.txt" > "$DNSMASQ_DIR/gfw_list.conf"
-			;;
-		"proxy_mainland_china")
-			sed -r -e "s/(.*)/server=\/\1\/127.0.0.1#$dns_port/g" \
-				"$HP_DIR/resources/china_list.txt" > "$DNSMASQ_DIR/china_list.conf"
-			;;
-		esac
+		cat <<-EOF >> "$DNSMASQ_DIR/redirect-dns.conf"
+			no-poll
+			no-resolv
+			server=127.0.0.1#$dns_port
+		EOF
 
 		if [ "$routing_mode" != "custom" ] && [ -s "$HP_DIR/resources/proxy_list.txt" ]; then
 			local wan_nftset_v6
@@ -106,39 +92,20 @@ start_service() {
 		# Setup routing table
 		local table_mark
 		config_get table_mark "infra" "table_mark" "100"
-		case "$proxy_mode" in
-		"redirect_tproxy")
-			local outbound_udp_node
-			config_get outbound_udp_node "config" "main_udp_node" "nil"
-			if [ "$outbound_udp_node" != "nil" ] || [ "$routing_mode" = "custom" ]; then
-				local tproxy_mark
-				config_get tproxy_mark "infra" "tproxy_mark" "101"
+		local outbound_udp_node
+		config_get outbound_udp_node "config" "main_udp_node" "nil"
+		if [ "$outbound_udp_node" != "nil" ]; then
+			local tproxy_mark
+			config_get tproxy_mark "infra" "tproxy_mark" "101"
 
-				ip rule add fwmark "$tproxy_mark" table "$table_mark"
-				ip route add local 0.0.0.0/0 dev lo table "$table_mark"
+			ip rule add fwmark "$tproxy_mark" table "$table_mark"
+			ip route add local 0.0.0.0/0 dev lo table "$table_mark"
 
-				if [ "$ipv6_support" -eq "1" ]; then
-					ip -6 rule add fwmark "$tproxy_mark" table "$table_mark"
-					ip -6 route add local ::/0 dev lo table "$table_mark"
-				fi
+			if [ "$ipv6_support" -eq "1" ]; then
+				ip -6 rule add fwmark "$tproxy_mark" table "$table_mark"
+				ip -6 route add local ::/0 dev lo table "$table_mark"
 			fi
-			;;
-		"redirect_tun"|"tun")
-			local tun_name tun_mark
-			config_get tun_name "infra" "tun_name" "singtun0"
-			config_get tun_mark "infra" "tun_mark" "102"
-
-			ip tuntap add mode tun user root name "$tun_name"
-			sleep 1s
-			ip link set "$tun_name" up
-
-			ip route replace default dev "$tun_name" table "$table_mark"
-			ip rule add fwmark "$tun_mark" lookup "$table_mark"
-
-			ip -6 route replace default dev "$tun_name" table "$table_mark"
-			ip -6 rule add fwmark "$tun_mark" lookup "$table_mark"
-			;;
-		esac
+		fi
 
 		# sing-box (client)
 		procd_open_instance "sing-box-c"
@@ -178,16 +145,8 @@ start_service() {
 	procd_set_param respawn
 	procd_close_instance
 
-	case "$routing_mode" in
-	"bypass_mainland_china")
-		# Prepare cache db
-		[ -e "$RUN_DIR/cache.db" ] || touch "$RUN_DIR/cache.db"
-		;;
-	"custom")
-		# Prepare ruleset directory
-		[ -d "$HP_DIR/ruleset" ] || mkdir -p "$HP_DIR/ruleset"
-		;;
-	esac
+	# Prepare cache db
+	[ -e "$RUN_DIR/cache.db" ] || touch "$RUN_DIR/cache.db"
 
 	[ "$outbound_node" = "nil" ] || echo > "$RUN_DIR/sing-box-c.log"
 

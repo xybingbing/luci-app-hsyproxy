@@ -1196,7 +1196,7 @@ return view.extend({
 	render(data) {
 		let m, s, o, ss, so;
 		let main_node = uci.get(data[0], 'config', 'main_node');
-		let routing_mode = uci.get(data[0], 'config', 'routing_mode');
+		let routing_mode = 'bypass_mainland_china';
 		let features = data[1];
 
 		/* Cache subscription information, it will be called multiple times */
